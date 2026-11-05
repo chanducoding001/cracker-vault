@@ -1,0 +1,22 @@
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: rgba(255, 248, 231, 1);
+  /* color: rgba(75, 35, 20, 1); */
+}
+
+.navbar {
+  background: rgba(128, 0, 32, 1);
+  color: #ffffff;
+  border-bottom: 2px solid #FFD700;
+}
+
+.card {
+  background: rgba(255, 253, 245, 1);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 12px;
+}

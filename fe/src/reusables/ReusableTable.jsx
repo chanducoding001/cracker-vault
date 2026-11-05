@@ -1,0 +1,670 @@
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import React, { useEffect, useMemo, useState } from "react";
+import Checkbox from "@mui/material/Checkbox";
+import ListItemText from "@mui/material/ListItemText";
+import InputLabel from "@mui/material/InputLabel";
+import FormControl from "@mui/material/FormControl";
+import OutlinedInput from "@mui/material/OutlinedInput";
+import {
+  Box,
+  Button,
+  Grid,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TextField,
+  Typography,
+} from "@mui/material";
+
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
+
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+// import { drawerWidth } from "../pages/common/LayoutFile";
+// import { useSelector } from "react-redux";
+
+// const excludedColumns = [
+//   "State",
+//   "District",
+//   "Subdistt",
+//   "Town/Village",
+//   "id",
+//   "village_code",
+//   "sub_district_code",
+// ];
+// const defaultSelectedColumns = [
+//   "state_name",
+//   "district_name",
+//   "sub_district_name",
+//   "village_name",
+//   "State",
+//   "District",
+//   "Subdistt",
+//   "Town/Village",
+//   "Level",
+//   "Name",
+//   "TRU",
+//   "No_HH",
+//   "TOT_P",
+//   "TOT_M",
+//   "TOT_F",
+// ];
+
+const formatColumnName = (column) => {
+  return column
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .replace(/^./, (char) => char.toUpperCase());
+};
+
+const ReusableTable = (props) => {
+  const { data = [], selectedState, selectedDist, selectedSubDist,excludedColumns,defaultSelectedColumns } = props;
+  const [page, setPage] = useState(0);
+  // const {selectedState,selectedDist,selectedSubDist} = useSelector((state)=>state.apiSlicer.censusSelectedSdsd);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [selectedColumns, setSelectedColumns] = useState(
+    defaultSelectedColumns,
+  );
+  const [filters, setFilters] = useState([
+    {
+      field: "",
+      operator: "=",
+      value: "",
+    },
+  ]);
+
+  //////////////////////////////////////////////////
+
+  const columns = useMemo(() => {
+    if (!data.length) return [];
+
+    return Object.keys(data[0]);
+  }, [data]);
+
+  useEffect(() => {
+    if (columns.length) {
+      const defaults = defaultSelectedColumns.filter((col) =>
+        columns.includes(col),
+      );
+
+      setSelectedColumns(defaults.length ? defaults : columns);
+    }
+  }, [columns]);
+
+  // useEffect(() => {
+  //   if (columns.length) {
+  //     setSelectedColumns(columns);
+  //   }
+  // }, [columns]);
+
+  //////////////////////////////////////////////////
+
+  useEffect(() => {
+    setPage(0);
+  }, [filters]);
+
+  //////////////////////////////////////////////////
+  const formatCellValue = (column, value) => {
+  if (value === null || value === undefined || value === "") {
+    return value;
+  }
+
+  // Don't format excluded columns
+  if (excludedColumns?.includes(column)) {
+    return value;
+  }
+
+  // Format numeric values and numeric strings
+  if (!isNaN(Number(value))) {
+    return Number(value).toLocaleString("en-IN");
+  }
+
+  return value;
+};
+  //////////////////////////////////////////////////
+
+  const updateFilter = (index, key, value) => {
+    setFilters((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              [key]: value,
+            }
+          : item,
+      ),
+    );
+  };
+
+  //////////////////////////////////////////////////
+
+  const addFilter = () => {
+    setFilters((prev) => [
+      ...prev,
+      {
+        field: "",
+        operator: "=",
+        value: "",
+      },
+    ]);
+  };
+
+  //////////////////////////////////////////////////
+
+  const removeFilter = (index) => {
+    setFilters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  //////////////////////////////////////////////////
+
+  const filteredRows = useMemo(() => {
+    console.log('in filterdata',data);
+    
+    return data?.filter((row) =>
+      filters.every(({ field, operator, value }) => {
+        if (!field || value === "") {
+          return true;
+        }
+
+        const rowValue = row[field];
+
+        const isNumber = !isNaN(Number(rowValue));
+
+        const left = isNumber
+          ? Number(rowValue)
+          : String(rowValue).toLowerCase();
+
+        const right = isNumber ? Number(value) : String(value).toLowerCase();
+
+        switch (operator) {
+          case ">":
+            return left > right;
+
+          case "<":
+            return left < right;
+
+          case "=":
+            return left === right;
+
+          case ">=":
+            return left >= right;
+
+          case "<=":
+            return left <= right;
+
+          case "!=":
+            return left !== right;
+
+          case "contains":
+            return String(left).includes(String(right));
+
+          default:
+            return true;
+        }
+      }),
+    );
+  }, [data, filters]);
+
+  //////////////////////////////////////////////////
+
+  const paginatedRows = useMemo(() => {
+    const start = page * rowsPerPage;
+
+    return filteredRows.slice(start, start + rowsPerPage);
+  }, [filteredRows, page, rowsPerPage]);
+
+  //////////////////////////////////////////////////
+
+  const statistics = useMemo(() => {
+    const population = filteredRows.reduce(
+      (sum, row) => sum + Number(row.TOT_P || 0),
+      0,
+    );
+
+    return {
+      rows: filteredRows.length,
+      population,
+    };
+  }, [filteredRows]);
+
+  //////////////////////////////////////////////////
+
+  const downloadTable = () => {
+    const doc = new jsPDF("landscape");
+
+    const query = filters
+      .filter((f) => f.field && f.value)
+      .map((f) => `${f.field} ${f.operator} ${f.value}`)
+      .join(" AND ");
+    const selectedTitle = `${selectedState?.value} - ${selectedDist?.value} - ${selectedSubDist?.value}`;
+    const title = `Census Report of ${selectedTitle}`;
+    doc.setProperties({
+      title,
+      subject: "Census Data",
+      author: "Chandrashekar",
+      creator: "Chandrashekar",
+    });
+
+    doc.setFontSize(18);
+    doc.text(title, 10, 10);
+
+    doc.setFontSize(11);
+    doc.text(`Query: ${query || "No Filters"}`, 10, 20);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [["S.No", ...selectedColumns]],
+      body: filteredRows.map((row, index) => [
+        index + 1,
+        ...selectedColumns.map((c) => formatCellValue(c, row[c])),
+      ]),
+    });
+
+    doc.save("census-report.pdf");
+  };
+
+  ///////////////////////////////////////////////////
+  const downloadExcel = () => {
+    const exportData = filteredRows.map((row, index) => {
+      const obj = {
+        "S.No": index + 1,
+      };
+
+      selectedColumns.forEach((column) => {
+        obj[column] = formatCellValue(column, row[column]);
+      });
+
+      return obj;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Census Report");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+    });
+
+    const selectedTitle = `${selectedState?.value}-${selectedDist?.value}-${selectedSubDist?.value}`;
+
+    saveAs(blob, `${selectedTitle}-census-report.xlsx`);
+  };
+  //////////////////////////////////////////////////
+  const downloadRowExcel = (row, serial) => {
+    const exportData = [
+      Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+          key,
+          formatCellValue(key, value),
+        ]),
+      ),
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Village");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+    });
+
+    saveAs(blob, `${row.Name || row.village_name || serial}.xlsx`);
+  };
+
+  //////////////////////////////////////////////////
+
+  const downloadRow = (row, serial) => {
+    const doc = new jsPDF();
+
+    const selectedTitle = `${selectedState?.value} - ${selectedDist?.value} - ${selectedSubDist?.value}`;
+    const title = `Census Report of ${selectedTitle}`;
+
+    doc.setProperties({
+      title,
+      subject: "Census Data",
+      author: "Chandrashekar",
+      creator: "Chandrashekar",
+    });
+
+    doc.setFontSize(18);
+    doc.text(title, 10, 10);
+
+    autoTable(doc, {
+      startY: 20,
+      body: [
+        // ["S.No", serial],
+        ...Object.entries(row).map(([key, value]) => [
+          key,
+          formatCellValue(key, value),
+        ]),
+      ],
+    });
+
+    doc.save(`${row.Name || serial}.pdf`);
+  };
+
+  //////////////////////////////////////////////////
+
+  return (
+    <Paper
+      sx={{
+        mt: 1,
+        p: 2,
+        width: "100%",
+        // width: `calc(100% - ${drawerWidth}px)`,
+        // minWidth: 0,
+        // overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
+      }}
+    >
+      <Grid container spacing={2} mb={2}>
+        <Grid size={12}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={addFilter}
+          >
+            Add Filter
+          </Button>
+        </Grid>
+
+        {filters.map((filter, index) => {
+          const used = filters
+            .filter((_, i) => i !== index)
+            .map((f) => f.field);
+
+          const available = columns.filter(
+            (c) => !used.includes(c) || c === filter.field,
+          );
+
+          return (
+            <React.Fragment key={index}>
+              <Grid size={3}>
+                <Select
+                  fullWidth
+                  displayEmpty
+                  value={filter.field}
+                  onChange={(e) => updateFilter(index, "field", e.target.value)}
+                >
+                  <MenuItem value="">Select Column</MenuItem>
+
+                  {available.map((c) => (
+                    <MenuItem key={c} value={c}>
+                      {c}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Grid>
+
+              <Grid size={2}>
+                <Select
+                  fullWidth
+                  value={filter.operator}
+                  onChange={(e) =>
+                    updateFilter(index, "operator", e.target.value)
+                  }
+                >
+                  <MenuItem value=">">&gt;</MenuItem>
+
+                  <MenuItem value="<">&lt;</MenuItem>
+
+                  <MenuItem value="=">=</MenuItem>
+
+                  <MenuItem value=">=">&gt;=</MenuItem>
+
+                  <MenuItem value="<=">&lt;=</MenuItem>
+
+                  <MenuItem value="!=">!=</MenuItem>
+
+                  <MenuItem value="contains">contains</MenuItem>
+                </Select>
+              </Grid>
+
+              <Grid size={2}>
+                <TextField
+                  fullWidth
+                  placeholder="Value"
+                  value={filter.value}
+                  onChange={(e) => updateFilter(index, "value", e.target.value)}
+                />
+              </Grid>
+
+              <Grid size={2}>
+                <IconButton onClick={() => removeFilter(index)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Grid>
+            </React.Fragment>
+          );
+        })}
+      </Grid>
+      <Grid size={6} sx={{ marginTop: "10px" }}>
+        <FormControl fullWidth>
+          <InputLabel>Columns</InputLabel>
+
+          <Select
+            multiple
+            value={selectedColumns}
+            // onChange={(e) => setSelectedColumns(e.target.value)}
+
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value.length) {
+                setSelectedColumns(value);
+              }
+            }}
+            input={<OutlinedInput label="Columns" />}
+            renderValue={(selected) => selected.join(", ")}
+          >
+            {columns.map((column) => (
+              <MenuItem key={column} value={column}>
+                <Checkbox checked={selectedColumns.includes(column)} />
+                <ListItemText primary={column} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+      {/* <Box
+  sx={{
+    mt: 2,
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 2,
+  }}
+>
+  <Box
+    sx={{
+      width: { xs: "100%", md: "50%" },
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 1,
+    }}
+  >
+    <Typography>Rows: {statistics.rows}</Typography>
+
+    <Typography>
+      Population: {formatCellValue("pop", statistics.population)}
+    </Typography>
+  </Box>
+
+  <Box
+    sx={{
+      width: { xs: "100%", md: "50%" },
+      display: "flex",
+      flexDirection: { xs: "column", sm: "row" },
+      justifyContent: "space-between",
+      gap: 1,
+    }}
+  >
+    <Button
+      variant="contained"
+      onClick={downloadTable}
+      sx={{ width: { xs: "100%", sm: "auto" } }}
+    >
+      Download PDF
+    </Button>
+
+    <Button
+      variant="contained"
+      color="success"
+      onClick={downloadExcel}
+      sx={{ width: { xs: "100%", sm: "auto" } }}
+    >
+      Download Excel
+    </Button>
+  </Box>
+      </Box> */}
+      <Box
+  sx={{
+    mt: 2,
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 2,
+  }}
+>
+  <Typography sx={{ width: { xs: "100%", sm: "auto" } }}>
+    Rows: {statistics.rows}
+  </Typography>
+
+  <Typography sx={{ width: { xs: "100%", sm: "auto" } }}>
+    Population: {formatCellValue("pop", statistics.population)}
+  </Typography>
+
+  <Button
+    variant="contained"
+    onClick={downloadTable}
+    sx={{ width: { xs: "100%", sm: "auto" } }}
+  >
+    Download PDF
+  </Button>
+
+  <Button
+    variant="contained"
+    color="success"
+    onClick={downloadExcel}
+    sx={{ width: { xs: "100%", sm: "auto" } }}
+  >
+    Download Excel
+  </Button>
+</Box>
+      <Box
+        sx={{
+          width: "100%",
+          overflowX: "auto",
+        }}
+      >
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>S.No</TableCell>
+
+                {/* {columns.map((c) => (
+                <TableCell key={c}>{c}</TableCell>
+              ))} */}
+                {selectedColumns?.map((c) => (
+                  <TableCell key={c}>{formatColumnName(c)}</TableCell>
+                //   <TableCell key={c}>{c}</TableCell>
+                ))}
+
+                <TableCell>PDF</TableCell>
+                <TableCell>Excel</TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {paginatedRows.map((row, index) => {
+                const serial = page * rowsPerPage + index + 1;
+
+                return (
+                  <TableRow key={serial}>
+                    <TableCell>{serial}</TableCell>
+
+                    {/* {columns.map((c) => (
+                    <TableCell key={c}>
+                      { row[c] }
+                      {formatCellValue(c,row[c])}
+                    </TableCell>
+                  ))} */}
+                    {selectedColumns.map((c) => (
+                      <TableCell key={c}>
+                        {formatCellValue(c, row[c])}
+                      </TableCell>
+                    ))}
+                    <TableCell>
+                      <Button
+                        size="small"
+                        onClick={() => downloadRow(row, serial)}
+                      >
+                        Download
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="small"
+                        color="success"
+                        onClick={() => downloadRowExcel(row, serial)}
+                      >
+                        Download
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+
+      <TablePagination
+        component="div"
+        count={filteredRows.length}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        rowsPerPageOptions={[25, 50, 100, 250]}
+        onPageChange={(_, newPage) => setPage(newPage)}
+        onRowsPerPageChange={(e) => {
+          setRowsPerPage(Number(e.target.value));
+          setPage(0);
+        }}
+      />
+    </Paper>
+  );
+};
+
+export default ReusableTable;
