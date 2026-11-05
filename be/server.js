@@ -40,10 +40,34 @@ app.set("trust proxy", 1);
 //   })
 // );
 
+// const allowedOrigins = [
+//   "http://localhost:5173",
+//   ...(process.env.CLIENT_URL?.split(",").map(url => url.trim()) || []),
+// ];
+
+// app.use(
+//   cors({
+//     origin: (origin, callback) => {
+//       if (!origin || allowedOrigins.includes(origin)) {
+//         return callback(null, true);
+//       }
+
+//       console.log("Blocked CORS Origin:", origin);
+
+//       return callback(null, false);
+//     },
+//     credentials: true,
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//   })
+// );
+
 const allowedOrigins = [
   "http://localhost:5173",
-  ...(process.env.CLIENT_URL?.split(",").map(url => url.trim()) || []),
-];
+  ...(process.env.CLIENT_URL?.split(",") || []),
+].map((url) => url.trim().replace(/\/+$/, ""));
+
+console.log("Allowed Origins:", allowedOrigins);
 
 app.use(
   cors({
@@ -53,7 +77,6 @@ app.use(
       }
 
       console.log("Blocked CORS Origin:", origin);
-
       return callback(null, false);
     },
     credentials: true,
