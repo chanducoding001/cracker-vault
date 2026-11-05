@@ -15,28 +15,50 @@ connectDB();
 // Trust proxy (important for Render, Railway, Nginx, etc.)
 app.set("trust proxy", 1);
 
-// Allowed Origins
+// // Allowed Origins
+// const allowedOrigins = [
+//   "http://localhost:5173",
+//   ...(process.env.CLIENT_URL?.split(",") || []),
+// ];
+
+// // CORS
+// app.use(
+//   cors({
+//     origin: (origin, callback) => {
+//       // Allow Postman, mobile apps, server-to-server requests
+//       if (!origin) {
+//         return callback(null, true);
+//       }
+
+//       if (allowedOrigins.includes(origin)) {
+//         return callback(null, true);
+//       }
+
+//       return callback(new Error(`CORS blocked for origin: ${origin}`));
+//     },
+//     credentials: true,
+//   })
+// );
+
 const allowedOrigins = [
   "http://localhost:5173",
-  ...(process.env.CLIENT_URL?.split(",") || []),
+  ...(process.env.CLIENT_URL?.split(",").map(url => url.trim()) || []),
 ];
 
-// CORS
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow Postman, mobile apps, server-to-server requests
-      if (!origin) {
+      if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      console.log("Blocked CORS Origin:", origin);
 
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+      return callback(null, false);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
