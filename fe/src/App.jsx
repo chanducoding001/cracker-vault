@@ -18,7 +18,7 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           <Route element={<HomeRedirect/>}>
-            <Route path="/login" element={<LoginComponent />} />
+            <Route path={navigationLocations?.login} element={<LoginComponent />} />
           </Route>
           <Route element={<Authenticated/>}>
             <Route path={navigationLocations?.home} element={<Navbar/>}>
@@ -36,3 +36,4 @@ const App = () => {
 }
       
 export default App;
+

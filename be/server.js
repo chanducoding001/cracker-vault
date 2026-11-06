@@ -15,52 +15,6 @@ connectDB();
 // Trust proxy (important for Render, Railway, Nginx, etc.)
 app.set("trust proxy", 1);
 
-// // Allowed Origins
-// const allowedOrigins = [
-//   "http://localhost:5173",
-//   ...(process.env.CLIENT_URL?.split(",") || []),
-// ];
-
-// // CORS
-// app.use(
-//   cors({
-//     origin: (origin, callback) => {
-//       // Allow Postman, mobile apps, server-to-server requests
-//       if (!origin) {
-//         return callback(null, true);
-//       }
-
-//       if (allowedOrigins.includes(origin)) {
-//         return callback(null, true);
-//       }
-
-//       return callback(new Error(`CORS blocked for origin: ${origin}`));
-//     },
-//     credentials: true,
-//   })
-// );
-
-// const allowedOrigins = [
-//   "http://localhost:5173",
-//   ...(process.env.CLIENT_URL?.split(",").map(url => url.trim()) || []),
-// ];
-
-// app.use(
-//   cors({
-//     origin: (origin, callback) => {
-//       if (!origin || allowedOrigins.includes(origin)) {
-//         return callback(null, true);
-//       }
-
-//       console.log("Blocked CORS Origin:", origin);
-
-//       return callback(null, false);
-//     },
-//     credentials: true,
-//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-//     allowedHeaders: ["Content-Type", "Authorization"],
-//   })
-// );
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -89,6 +43,7 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// URL
 app.use(process.env.AUTH_MAIN_URL || "/api/auth",authRoutes);
 app.use(process.env.UPLOAD_CSV_MAIN_URL || "/api/csv", uploadCsvRoutes);
 

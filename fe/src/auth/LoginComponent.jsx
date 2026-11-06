@@ -1,16 +1,4 @@
-// import React from 'react'
-
-// const LoginComponent = () => {
-//   return (
-//     <div>LoginComponent</div>
-//   )
-// }
-
-// export default LoginComponent;
-
-
-
-import React, { useState } from "react";
+import  { useState } from "react";
 import {
   Box,
   Button,
@@ -24,20 +12,14 @@ import {
   InputAdornment,
   Divider,
 } from "@mui/material";
-
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { useNavigate } from "react-router-dom";
-// import UniversalModal from "../../features/UniversalModal";
-// import { apiDetails, navigationLocations, ROLES } from "../../utils/utils";
 import useModal from "../reusables/useModal";
 import ReusableModal from "../reusables/ReusableModal";
 import { baseUrlInstance } from "../app/baseUrlInstance";
-// import { useDispatch } from "react-redux";
-// import { inputStyle } from "../signUp/SignUp";
-// import { loginApi } from "../../app/thunkApiCalls";
-// import { setUser } from "../../app/apiSlicer";
+
 
 const inputStyle = {
   input: { color: "white" },
@@ -53,17 +35,11 @@ const LoginComponent = () => {
     showModal,
     modalData,
     modalType,
-    modalNavigation,
-    modalAction,
-    setModalAction,
     setShowModal,
     setModalData,
     setModalType,
-    setModalNavigation,
   } = useModal();
   const [showPassword, setShowPassword] = useState(false);
-  const [redirectPath, setRedirectPath] = useState("");
-  // const dispatch = useDispatch();
 
   const initialValues = {
     email: "",
@@ -133,12 +109,8 @@ const LoginComponent = () => {
           {/*  Glass Card */}
           <Card
             sx={{
-              // backdropFilter: "blur(20px)",
-              // background: "rgba(255,255,255,0.15)",
               border: "1px solid rgba(255,255,255,0.3)",
               borderRadius: 4,
-              // boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
-              // color: "white",
             }}
           >
             <CardContent>
@@ -182,11 +154,9 @@ const LoginComponent = () => {
                       margin="normal"
                       error={touched.email && Boolean(errors.email)}
                       helperText={touched.email && errors.email}
-                      // sx={inputStyle}
                       sx={{
                         input: { color: "black" },
                         label: { color: "rgba(18, 2, 2, 0.8)" }
-                        // label: { color: "rgba(255,255,255,0.8)" }
                       }}
                     />
 
@@ -205,12 +175,8 @@ const LoginComponent = () => {
                       sx={{
                         input: { color: "black" },
                         label: { color: "rgba(18, 2, 2, 0.8)" }
-                        // label: { color: "rgba(255,255,255,0.8)" }
                       }}
-                      // sx={{
-                      //   input: { color: "white" },
-                      //   label: { color: "rgba(255,255,255,0.8)" }
-                      // }}
+                      
                       InputProps={{
                         endAdornment: (
                           <InputAdornment position="end">
@@ -235,19 +201,6 @@ const LoginComponent = () => {
                       type="submit"
                       disabled={loading}
                       variant="outlined"
-                      // sx={{
-                      //   mt: 3,
-                      //   py: 1.4,
-                      //   borderRadius: 2,
-                      //   fontWeight: "bold",
-                      //   color: "white",
-                      //   background: "linear-gradient(135deg, #00c6ff, #0072ff)",
-                      //   boxShadow: "0 10px 30px rgba(0, 198, 255, 0.4)",
-                      //   "&:hover": {
-                      //     transform: "translateY(-2px)",
-                      //     boxShadow: "0 15px 40px rgba(0, 198, 255, 0.6)",
-                      //   },
-                      // }}
                     >
                       {loading ? (
                         <CircularProgress size={22} sx={{ color: "white" }} />

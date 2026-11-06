@@ -6,8 +6,6 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -15,7 +13,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import MonitorIcon from '@mui/icons-material/Monitor';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import useAuthenticateCheck from '../auth/useAuthenticateCheck';
 import useModal from '../reusables/useModal';
 import ReusableModal from '../reusables/ReusableModal';
@@ -27,7 +25,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 
 export default function Navbar() {
     const [open, setOpen] = React.useState(false);
-    const { isLoggedIn, setIsLoggedIn,user,setUser } = useAuthenticateCheck();
+    const { isLoggedIn } = useAuthenticateCheck();
     const {
     showModal,
     modalData,
@@ -40,8 +38,8 @@ export default function Navbar() {
     setModalType,
     setModalNavigation,
   } = useModal();
-    // const [isLoggedIn, setIsLoggedIn] = React.useState(true);
-    // const [isLoggedIn, setIsLoggedIn] = React.useState(localStorage.getItem('user') !== null);
+  const navigate = useNavigate();
+
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
   };
@@ -120,7 +118,8 @@ export default function Navbar() {
               <Button variant="outlined" color="inherit" onClick={() => {
 
                 localStorage.removeItem('user');
-                window.location.href = '/login';
+                navigate('/login');
+                // window.location.href = '/login';
                 
               }}>
                 Log out
@@ -142,22 +141,10 @@ export default function Navbar() {
               </Button>
             )
           }
-          {/* <Drawer open={open} onClose={toggleDrawer(false)}
-          sx={{
-    '& .MuiDrawer-paper': {
-      backgroundColor: 'rgba(255, 248, 231, 1)',
-    },
-  }}
-          >
-        {DrawerList}
-      </Drawer> */}
         </Toolbar>
       </AppBar>
     </Box>
     <Box>
-      {/* <Typography variant="h4" component="div" sx={{ flexGrow: 1, textAlign: 'center', marginTop: '20px' }}>
-        Welcome to Cracker Vault
-      </Typography> */}
       <Outlet/>
     </Box>
     <ReusableModal
